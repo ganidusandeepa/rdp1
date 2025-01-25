@@ -4,7 +4,7 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Using ubuntu-latest as Kali Linux is based on Ubuntu
+    runs-on: ubuntu-latest  # Kali Linux is based on Ubuntu, so using ubuntu-latest
 
     steps:
     - name: Download Ngrok
@@ -27,7 +27,9 @@ jobs:
 
     - name: Set password for user
       run: |
-        echo "kali:P@ssw0rd!" | sudo -S chpasswd
+        echo "kali:P@ssw0rd!" | sudo passwd --stdin kali
+      # If --stdin doesn't work, try using this alternative approach:
+      # echo -e "P@ssw0rd!\nP@ssw0rd!" | sudo passwd kali
 
     - name: Create Tunnel
       run: ./ngrok tcp 3389
