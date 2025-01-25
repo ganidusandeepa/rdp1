@@ -1,0 +1,32 @@
+name: CI
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Kali Linux is based on Ubuntu, so we use ubuntu-latest here
+
+    steps:
+    - name: Download Ngrok
+      run: wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -O ngrok.zip
+
+    - name: Extract Ngrok
+      run: unzip ngrok.zip
+
+    - name: Authenticate Ngrok
+      run: ./ngrok authtoken $NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Enable RDP
+      run: |
+        sudo apt update
+        sudo apt install -y xrdp
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+
+    - name: Set password for user
+      run: echo "kali:P@ssw0rd!" | sudo chpasswd
+
+    - name: Create Tunnel
+      run: ./ngrok tcp 3389
