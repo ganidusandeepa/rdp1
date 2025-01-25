@@ -9,14 +9,14 @@ jobs:
     steps:
       - name: Configure Parrot OS Repository and Update
         run: |
-          # Add Parrot OS repository to sources.list
-          echo "deb https://deb.parrot.sh/parrot rolling main contrib non-free" | sudo tee /etc/apt/sources.list
+          # Add the correct Parrot OS repository
+          echo "deb https://deb.parrot.sh/parrot parrot rolling main contrib non-free" | sudo tee /etc/apt/sources.list.d/parrot.list
 
-          # Add Parrot OS GPG keys
+          # Add the Parrot OS GPG key
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 5EE1DBA789C809CB
 
           # Update and upgrade the system
-          sudo apt update
+          sudo apt update || { echo "Failed to fetch updates. Please check the repository."; exit 1; }
           sudo apt -y full-upgrade || {
             echo "Upgrade failed. Fixing dependencies...";
             sudo apt --fix-broken install -y;
@@ -28,60 +28,4 @@ jobs:
           # Download ngrok 3.2 for Linux
           wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz
 
-          # Extract and move ngrok binary to /usr/local/bin
-          tar -xvf ngrok.tgz
-          sudo mv ngrok /usr/local/bin/ngrok
-
-      - name: Authenticate Ngrok
-        run: |
-          if command -v ngrok &> /dev/null; then
-            ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-          else
-            echo "Ngrok is not installed or not in the PATH."
-            exit 1
-          fi
-        env:
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-
-      - name: Install and Enable RDP (xrdp)
-        run: |
-          # Install xrdp and XFCE4 for Parrot OS
-          sudo apt install -y xrdp xfce4 xfce4-goodies || {
-            echo "Installation failed. Fixing dependencies...";
-            sudo apt --fix-broken install -y;
-            sudo apt install -y xrdp xfce4 xfce4-goodies;
-          }
-
-          # Enable and start xrdp service
-          sudo systemctl enable xrdp
-          sudo systemctl start xrdp
-
-      - name: Check Existing Users
-        run: |
-          echo "Existing users:"
-          cut -d: -f1 /etc/passwd
-
-      - name: Remove Password for User runneradmin (Passwordless Login)
-        run: |
-          if id "runneradmin" &>/dev/null; then
-            sudo passwd -d runneradmin
-          else
-            echo "User 'runneradmin' not found. Please check the user name."
-          fi
-
-      - name: Set Up Auto-Login for xrdp
-        run: |
-          # Set up XFCE4 as the default session
-          echo "startxfce4" > ~/.xsession
-
-          # Modify xrdp.ini to enable console login
-          sudo sed -i 's/param=/param=console/' /etc/xrdp/xrdp.ini
-
-      - name: Create Tunnel
-        run: |
-          if command -v ngrok &> /dev/null; then
-            ngrok tcp 3389
-          else
-            echo "Ngrok is not installed or not in the PATH."
-            exit 1
-          fi
+          # Extract and move ngr
