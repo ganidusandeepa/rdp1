@@ -4,7 +4,7 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Kali Linux is based on Ubuntu, so we use ubuntu-latest here
+    runs-on: ubuntu-latest  # Using ubuntu-latest as Kali Linux is based on Ubuntu
 
     steps:
     - name: Download Ngrok
@@ -18,7 +18,7 @@ jobs:
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Enable RDP
+    - name: Install and Enable RDP (xrdp)
       run: |
         sudo apt update
         sudo apt install -y xrdp
@@ -26,7 +26,8 @@ jobs:
         sudo systemctl start xrdp
 
     - name: Set password for user
-      run: echo "kali:P@ssw0rd!" | sudo chpasswd
+      run: |
+        echo "kali:P@ssw0rd!" | sudo -S chpasswd
 
     - name: Create Tunnel
       run: ./ngrok tcp 3389
