@@ -25,9 +25,18 @@ jobs:
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
 
+    - name: Check existing users
+      run: |
+        echo "Existing users:"
+        cut -d: -f1 /etc/passwd  # List all users on the system
+
     - name: Remove password for user kali (Passwordless Login)
       run: |
-        sudo passwd -d kali  # Remove the password for the kali user
+        if id "kali" &>/dev/null; then
+          sudo passwd -d kali  # Remove the password for the kali user
+        else
+          echo "User 'kali' not found. Please check the user name."
+        fi
 
     - name: Set up auto-login for xrdp
       run: |
