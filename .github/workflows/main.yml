@@ -16,13 +16,26 @@ jobs:
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ED444FF07D8D0BF6
           sudo apt update
 
+          # Fix dpkg diversion conflicts
+          sudo rm -f /var/cache/apt/archives/base-files_1%3a2024.4.1_amd64.deb
+          sudo dpkg-divert --remove /lib32 || true
+          sudo dpkg --configure -a
+
           # Upgrade the system
-          sudo apt -y full-upgrade
+          sudo apt -y full-upgrade || {
+            echo "System upgrade failed. Attempting to fix broken packages...";
+            sudo apt --fix-broken install -y;
+            sudo apt -y full-upgrade;
+          }
 
       - name: Install xrdp and XFCE4 for Kali Linux
         run: |
           # Install xrdp and XFCE4 (Kali’s default desktop environment)
-          sudo apt install -y xrdp xfce4 xfce4-goodies || { echo "Failed to install xrdp and XFCE4"; exit 1; }
+          sudo apt install -y xrdp xfce4 xfce4-goodies || {
+            echo "Failed to install xrdp and XFCE4. Attempting to fix broken packages...";
+            sudo apt --fix-broken install -y;
+            sudo apt install -y xrdp xfce4 xfce4-goodies;
+          }
 
           # Enable and start the xrdp service
           sudo systemctl enable xrdp || { echo "Failed to enable xrdp"; exit 1; }
@@ -47,4 +60,11 @@ jobs:
       - name: Configure XFCE4 and auto-login for xrdp
         run: |
           # Configure XFCE4 to be the default session
-          echo "startxfce4" > ~/.xs
+          echo "startxfce4" > ~/.xsession
+
+          # Ensure xrdp.ini is updated for console login
+          sudo sed -i 's/param=/param=console/' /etc/xrdp/xrdp.ini
+
+      - name: Create Tunnel with Ngrok
+        run: |
+          ngrok tcp 3389 || { echo "Failed to create Ngrok tunnel"; exit 1; }
