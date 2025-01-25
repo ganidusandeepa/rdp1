@@ -4,61 +4,47 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Kali Linux is based on Ubuntu, so using ubuntu-latest
+    runs-on: ubuntu-latest  # GitHub Actions runners are based on Ubuntu
 
     steps:
-      - name: Download and install ngrok 3.2
+      - name: Update package repository and install prerequisites for Kali Linux
         run: |
-          # Download ngrok 3.2 for Linux using the provided URL
-          wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz
+          # Add Kali Linux repository to sources.list
+          echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" | sudo tee /etc/apt/sources.list
 
-          # Extract the downloaded archive (assuming it's a tar archive)
-          tar -xvf ngrok.tgz
+          # Add Kali Linux keys and update the package list
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ED444FF07D8D0BF6
+          sudo apt update
 
-          # Move ngrok binary to PATH
-          sudo mv ngrok /usr/local/bin/ngrok
+          # Upgrade the system
+          sudo apt -y full-upgrade
+
+      - name: Install xrdp and XFCE4 for Kali Linux
+        run: |
+          # Install xrdp and XFCE4 (Kali’s default desktop environment)
+          sudo apt install -y xrdp xfce4 xfce4-goodies || { echo "Failed to install xrdp and XFCE4"; exit 1; }
+
+          # Enable and start the xrdp service
+          sudo systemctl enable xrdp || { echo "Failed to enable xrdp"; exit 1; }
+          sudo systemctl start xrdp || { echo "Failed to start xrdp"; exit 1; }
+
+      - name: Download and install Ngrok
+        run: |
+          if ! command -v ngrok &> /dev/null; then
+            wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz || { echo "Failed to download ngrok"; exit 1; }
+            tar -xvf ngrok.tgz || { echo "Failed to extract ngrok"; exit 1; }
+            sudo mv ngrok /usr/local/bin/ngrok
+          else
+            echo "Ngrok is already installed"
+          fi
 
       - name: Authenticate Ngrok
         run: |
-          if command -v ngrok &> /dev/null; then
-            ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-          else
-            echo "Ngrok is not installed or not in the PATH."
-            exit 1
-          fi
+          ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} || { echo "Failed to authenticate ngrok"; exit 1; }
         env:
           NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-      - name: Install and Enable RDP (xrdp)
+      - name: Configure XFCE4 and auto-login for xrdp
         run: |
-          sudo apt update
-          sudo apt install -y xrdp
-          sudo systemctl enable xrdp
-          sudo systemctl start xrdp
-
-      - name: Check existing users
-        run: |
-          echo "Existing users:"
-          cut -d: -f1 /etc/passwd
-
-      - name: Remove password for user runneradmin (Passwordless Login)
-        run: |
-          if id "runneradmin" &>/dev/null; then
-            sudo passwd -d runneradmin
-          else
-            echo "User 'runneradmin' not found. Please check the user name."
-          fi
-
-      - name: Set up auto-login for xrdp
-        run: |
-          echo "startxfce4" > ~/.xsession
-          sudo sed -i 's/param=/param=console/' /etc/xrdp/xrdp.ini
-
-      - name: Create Tunnel
-        run: |
-          if command -v ngrok &> /dev/null; then
-            ngrok tcp 3389
-          else
-            echo "Ngrok is not installed or not in the PATH."
-            exit 1
-          fi
+          # Configure XFCE4 to be the default session
+          echo "startxfce4" > ~/.xs
