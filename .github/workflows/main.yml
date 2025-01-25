@@ -7,32 +7,28 @@ jobs:
     runs-on: ubuntu-latest  # GitHub Actions runners are based on Ubuntu
 
     steps:
-      - name: Configure Kali Linux Repository and Update
+      - name: Configure Parrot OS Repository and Update
         run: |
-          # Add Kali Linux repository to sources.list
-          echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" | sudo tee /etc/apt/sources.list
+          # Add Parrot OS repository to sources.list
+          echo "deb https://deb.parrot.sh/parrot rolling main contrib non-free" | sudo tee /etc/apt/sources.list
 
-          # Add Kali Linux keys and update the package list
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ED444FF07D8D0BF6
+          # Add Parrot OS GPG keys
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 5EE1DBA789C809CB
+
+          # Update and upgrade the system
           sudo apt update
-
-          # Fix dpkg conflicts and configure
-          sudo dpkg-divert --remove /lib32 || true
-          sudo dpkg --configure -a
-
-          # Full system upgrade
           sudo apt -y full-upgrade || {
             echo "Upgrade failed. Fixing dependencies...";
             sudo apt --fix-broken install -y;
             sudo apt -y full-upgrade;
           }
 
-      - name: Download and Install Ngrok 3.2
+      - name: Install Ngrok
         run: |
           # Download ngrok 3.2 for Linux
           wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz
 
-          # Extract and install ngrok
+          # Extract and move ngrok binary to /usr/local/bin
           tar -xvf ngrok.tgz
           sudo mv ngrok /usr/local/bin/ngrok
 
@@ -49,14 +45,14 @@ jobs:
 
       - name: Install and Enable RDP (xrdp)
         run: |
-          # Install xrdp and XFCE4 desktop environment
+          # Install xrdp and XFCE4 for Parrot OS
           sudo apt install -y xrdp xfce4 xfce4-goodies || {
             echo "Installation failed. Fixing dependencies...";
             sudo apt --fix-broken install -y;
             sudo apt install -y xrdp xfce4 xfce4-goodies;
           }
 
-          # Enable and start xrdp
+          # Enable and start xrdp service
           sudo systemctl enable xrdp
           sudo systemctl start xrdp
 
