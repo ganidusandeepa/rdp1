@@ -15,7 +15,13 @@ jobs:
         sudo mv ngrok /usr/local/bin/ngrok  # Move it to a directory in the PATH
 
     - name: Authenticate Ngrok
-      run: ./ngrok authtoken $NGROK_AUTH_TOKEN
+      run: |
+        if command -v ngrok &> /dev/null; then
+          ngrok authtoken $NGROK_AUTH_TOKEN
+        else
+          echo "Ngrok is not installed or not in the PATH."
+          exit 1
+        fi
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
@@ -47,4 +53,10 @@ jobs:
         sudo sed -i 's/param=/param=console/' /etc/xrdp/xrdp.ini
 
     - name: Create Tunnel
-      run: ./ngrok tcp 3389  # Create an Ngrok tunnel for RDP on port 3389
+      run: |
+        if command -v ngrok &> /dev/null; then
+          ngrok tcp 3389  # Create an Ngrok tunnel for RDP on port 3389
+        else
+          echo "Ngrok is not installed or not in the PATH."
+          exit 1
+        fi
