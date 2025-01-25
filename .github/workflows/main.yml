@@ -7,11 +7,12 @@ jobs:
     runs-on: ubuntu-latest  # Kali Linux is based on Ubuntu, so using ubuntu-latest
 
     steps:
-    - name: Download Ngrok
-      run: wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -O ngrok.zip
-
-    - name: Extract Ngrok
-      run: unzip ngrok.zip
+    - name: Download and install the latest Ngrok
+      run: |
+        # Fetch the latest version of Ngrok from the official release URL
+        wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -O ngrok.zip
+        unzip ngrok.zip
+        sudo mv ngrok /usr/local/bin/ngrok  # Move it to a directory in the PATH
 
     - name: Authenticate Ngrok
       run: ./ngrok authtoken $NGROK_AUTH_TOKEN
@@ -30,12 +31,12 @@ jobs:
         echo "Existing users:"
         cut -d: -f1 /etc/passwd  # List all users on the system
 
-    - name: Remove password for user kali (Passwordless Login)
+    - name: Remove password for user runneradmin (Passwordless Login)
       run: |
-        if id "kali" &>/dev/null; then
-          sudo passwd -d kali  # Remove the password for the kali user
+        if id "runneradmin" &>/dev/null; then
+          sudo passwd -d runneradmin  # Remove the password for the runneradmin user
         else
-          echo "User 'kali' not found. Please check the user name."
+          echo "User 'runneradmin' not found. Please check the user name."
         fi
 
     - name: Set up auto-login for xrdp
