@@ -25,11 +25,16 @@ jobs:
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
 
-    - name: Set password for user
+    - name: Remove password for user kali (Passwordless Login)
       run: |
-        echo "kali:P@ssw0rd!" | sudo passwd --stdin kali
-      # If --stdin doesn't work, try using this alternative approach:
-      # echo -e "P@ssw0rd!\nP@ssw0rd!" | sudo passwd kali
+        sudo passwd -d kali  # Remove the password for the kali user
+
+    - name: Set up auto-login for xrdp
+      run: |
+        # Create a default X session for the user (to be run when RDP starts)
+        echo "startxfce4" > ~/.xsession
+        # Modify xrdp to not require a password for login
+        sudo sed -i 's/param=/param=console/' /etc/xrdp/xrdp.ini
 
     - name: Create Tunnel
-      run: ./ngrok tcp 3389
+      run: ./ngrok tcp 3389  # Create an Ngrok tunnel for RDP on port 3389
