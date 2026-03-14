@@ -1,4 +1,4 @@
-name: Windows RDP 12H
+name: Windows RDP (12H)
 
 on:
   workflow_dispatch:
@@ -10,36 +10,58 @@ jobs:
 
     steps:
     - name: Download ngrok
-      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+      run: |
+        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
 
     - name: Extract ngrok
-      run: Expand-Archive ngrok.zip
+      run: |
+        Expand-Archive ngrok.zip -DestinationPath ngrok
 
-    - name: Auth ngrok
-      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+    - name: Authenticate ngrok
+      run: |
+        .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Enable RDP
+    - name: Enable Remote Desktop
       run: |
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Enable RDP Authentication
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
     - name: Set Password
       run: |
         net user runneradmin P@ssw0rd!
 
-    - name: Start ngrok tunnel
-      run: Start-Process -NoNewWindow -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
-
-    - name: Show RDP Address
+    - name: Start ngrok Tunnel
       run: |
-        Start-Sleep 10
-        Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+        Start-Process ".\ngrok\ngrok.exe" "tcp 3389"
 
-    - name: Keep Alive (12 hours)
+    - name: Get RDP Address
       run: |
-        for ($i=0; $i -lt 720; $i++) {
-          Write-Output "Running minute $i"
+        $max=30
+        for ($i=0; $i -lt $max; $i++) {
+          try {
+            $tunnel = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+            $addr = $tunnel.tunnels[0].public_url
+            Write-Output "==============================="
+            Write-Output "RDP ADDRESS: $addr"
+            Write-Output "USERNAME: runneradmin"
+            Write-Output "PASSWORD: P@ssw0rd!"
+            Write-Output "==============================="
+            break
+          } catch {
+            Write-Output "Waiting for ngrok..."
+            Start-Sleep 2
+          }
+        }
+
+    - name: Keep Runner Alive (12h)
+      run: |
+        for ($i=1; $i -le 720; $i++) {
+          Write-Output "Runner alive minute $i"
           Start-Sleep -Seconds 60
         }
